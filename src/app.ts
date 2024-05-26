@@ -3,16 +3,21 @@ import cors from "cors";
 import morgan from "morgan";
 import axios from "axios";
 import config from "./app/config";
+import { Disbursement, RecentDisbursement } from "./types";
 
 const app = express();
+
+app.set('view engine', 'ejs')
 
 app.use(express.json());
 app.use(cors());
 app.use(morgan('tiny'));
 
+
 app.get("/client-info", async function (req: Request, res: Response, next: NextFunction) {
     try {
         const response = await axios.get(config.GOOGLE_SHEETS_CSV_URL as string);
+
         const csvText = response.data
 
         const rows = csvText.split(/\r?\n/).map((row: string) => row.split(','));
@@ -122,9 +127,10 @@ app.get("/disbursement-overview", async function (req: Request, res: Response, n
                 let value = ""
 
                 if ((key === "Next Disbursement") || (key === "Next Disbursement Amount") || (key === "Earnings to Date")) {
-                    value = row.slice(1, row.length).join(" ").trim() || '';
+
+                    value = row.slice(1, row.length).join(" ").trim().replace(/""/g, '"').replace(/"\$/g, '$').replace(/"\B/g, '') || '';
                 } else {
-                    value = row[1]?.trim() || '';
+                    value = row[1]?.trim().replace(/""/g, '"').replace(/"\$/g, '$').replace(/"\B/g, '') || '';
                 }
 
                 disbursementOverview[key] = value;
@@ -132,6 +138,146 @@ app.get("/disbursement-overview", async function (req: Request, res: Response, n
         }
 
         res.status(200).json(disbursementOverview)
+
+    } catch (error) {
+        next(error)
+    }
+})
+
+app.get("/growth-analytics-chart", async function (req: Request, res: Response, next: NextFunction) {
+    try {
+        const response = await axios.get(config.GOOGLE_SHEETS_CSV_URL as string);
+        const csvText = response.data
+        const rows = csvText.split(/\r?\n/).map((row: string) => row.split(','));
+
+        const obj = {
+            dollar_scale: (rows[21] as []).slice(1, rows[21].length).join('').replace(/""/g, '"').replace(/"\$/g, '$').replace(/"\B/g, ''),
+            monthly_scale: (rows[22] as []).slice(1, rows[21].length).join('')
+        }
+
+        res.status(200).json(obj)
+
+    } catch (error) {
+        next(error)
+    }
+})
+
+app.get("/disbursement-info", async function (req: Request, res: Response, next: NextFunction) {
+    try {
+        const response = await axios.get(config.GOOGLE_SHEETS_CSV_URL as string);
+        const csvText = response.data
+        const rows = csvText.split(/\r?\n/).map((row: string) => row.split(','));
+
+        const data: string[][] = []
+
+        for (let i = 4; i <= 15; i++) {
+            data.push(rows[i])
+
+        }
+
+        const disbursements: Disbursement[] = [];
+        const dateRegex = /"([a-zA-Z]+\s+\d{1,2})\s*(\d{4})"/;
+
+        data.forEach(row => {
+            const disbursementIndex = row.findIndex(item => item.startsWith('Disbursement'));
+            if (disbursementIndex !== -1) {
+                const disbursementTitle = row[disbursementIndex];
+                const dateMatch = (row[disbursementIndex + 1] + ' ' + row[disbursementIndex + 2]).match(dateRegex);
+                const datePaid = dateMatch ? new Date(`${dateMatch[1]} ${dateMatch[2]}`).toISOString() : '';
+                const disbursementsPaid = parseFloat(row[disbursementIndex + 3].replace(/[^0-9.-]+/g, '')) || '';
+                const disbursementsExpected = parseFloat(row[disbursementIndex + 4].replace(/[^0-9.-]+/g, '')) || '';
+                const blockchainTxUrl = row[disbursementIndex + 5] || '';
+
+                disbursements.push({
+                    disbursement: disbursementTitle,
+                    date_paid: datePaid,
+                    disbursements_paid: disbursementsPaid,
+                    disbursements_expected: disbursementsExpected,
+                    blockchain_tx_url: blockchainTxUrl
+                });
+            }
+        });
+
+        res.status(200).json(disbursements)
+
+    } catch (error) {
+        next(error)
+    }
+})
+
+app.get("/recent-disbursements", async function (req: Request, res: Response, next: NextFunction) {
+    try {
+        const response = await axios.get(config.GOOGLE_SHEETS_CSV_URL as string);
+        const csvText = response.data
+        const rows = csvText.split(/\r?\n/).map((row: string) => row.split(','));
+
+        const data: string[][] = [
+            rows[18].slice(3),
+            rows[19].slice(3)
+        ];
+
+        const disbursements: RecentDisbursement[] = [];
+
+        data.forEach(row => {
+            const disbursementIndex = row.findIndex((item: string) => item.startsWith('Disbursement'));
+            if (disbursementIndex !== -1) {
+                const mostRecentDisbursement = row[disbursementIndex - 1].trim();
+                const disbursementTitle = row[disbursementIndex].trim();
+
+                const dateRegex = /"([a-zA-Z]+\s+\d{1,2})\s*(\d{4})"/;
+                const dateMatch = (row[disbursementIndex + 1] + ' ' + row[disbursementIndex + 2]).match(dateRegex);
+                const datePaid = dateMatch ? new Date(`${dateMatch[1]} ${dateMatch[2]}`).toISOString() : '';
+
+                const amountPaid = parseFloat((row[disbursementIndex + 3] + row[disbursementIndex + 4]).replace(/[^0-9.-]+/g, '')) || 0;
+                const blockchainTxUrl = row[disbursementIndex + 5]?.trim() || '';
+
+                disbursements.push({
+                    most_recent_disbursement: mostRecentDisbursement,
+                    disbursement_title: disbursementTitle,
+                    date_paid: datePaid,
+                    amount_paid: amountPaid,
+                    blockchain_tx_url: blockchainTxUrl
+                });
+            }
+        });
+
+        res.status(200).json(disbursements)
+
+    } catch (error) {
+        next(error)
+    }
+})
+
+app.get("/login", async function (req: Request, res: Response, next: NextFunction) {
+    try {
+        const response = await axios.get(config.GOOGLE_SHEETS_CSV_URL as string);
+
+        const csvText = response.data
+
+        const rows = csvText.split(/\r?\n/).map((row: string) => row?.split(','));
+
+        interface Credentials {
+            username: string;
+            password: string;
+        }
+
+        const data: string[][] = [
+            rows[30],
+            rows[31]
+        ]
+
+        const credentials: Partial<Credentials> = {};
+
+        data.forEach(row => {
+            const key = row[0]?.trim();
+            const value = row[1]?.trim();
+
+            if (key && value) {
+                credentials[key as keyof Credentials] = value;
+            }
+        });
+
+        res.status(200).json(credentials)
 
     } catch (error) {
         next(error)
@@ -154,3 +300,77 @@ app.use(function (err: Error, req: Request, res: Response, next: NextFunction) {
 })
 
 export default app;
+
+
+
+/**
+ * 
+
+function doGet() {
+  const doc = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = doc.getSheetByName("Template")
+  const values = sheet.getDataRange().getValues()
+
+  const client_info = {}
+  client_info["first_name"] = values[4][1];
+  client_info["last_name"] = values[5][1];
+  client_info["tx_code"] = values[6][1];
+  client_info["ERC20_wallet_address"] = values[7][1];
+  client_info["ERC20_wallet_address_verigied"] = values[8][1];
+  client_info["sales_purchase_agreement"] = values[9][1];
+  client_info["memorandum_understanding"] = values[10][1];
+  client_info["VPSBLC_NFT"] = values[11][1];
+
+  const vpsblc_information = {};
+  vpsblc_information["vpsblc_purchase_price"] = values[14][1];
+  vpsblc_information["vpsblc_face_value"] = values[15][1];
+  vpsblc_information["vpsblc_purchase_status"] = values[16][1];
+  vpsblc_information["vpsblc_funding_status"] = values[17][1];
+  vpsblc_information["trace_status"] = values[18][1];
+
+  const growth_analytics_chart = {};
+  growth_analytics_chart["dollar_scale"] = values[21][1]
+  growth_analytics_chart["monthly_scale"] = values[22][1]
+
+  const disbursement_overview = {};
+  disbursement_overview["next_disbursement"] = values[25][1];
+  disbursement_overview["next_disbursement_amount"] = values[26][1];
+  disbursement_overview["earnings_to_date"] = values[27][1];
+
+  const disbursement_info = []
+  for (let r = 4; r < 16; r++) {
+    const row = {};
+    row["disbursement"] = values[r][3];
+    row["date_paid"] = values[r][4];
+    row["disbursements_paid"] = values[r][5];
+    row["disbursements_expected"] = values[r][6];
+    row["blockchain_tx_url"] = values[r][7];
+
+    disbursement_info.push(row)
+  }
+
+  const recent_disbursements = []
+  for (let r = 18; r < 20; r++) {
+    const row = {};
+    row["most_recent_disbursement"] = values[r][3];
+    row["disbursement_title"] = values[r][4];
+    row["date_paid"] = values[r][5];
+    row["amount_paid"] = values[r][6];
+    row["blockchain_tx_url"] = values[r][7];
+
+    recent_disbursements.push(row)
+  }
+
+  return ContentService.createTextOutput(JSON.stringify({
+    client_info,
+    vpsblc_information,
+    growth_analytics_chart,
+    disbursement_overview,
+    disbursement_info,
+    recent_disbursements,
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+
+
+ */
