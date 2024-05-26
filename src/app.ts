@@ -248,17 +248,23 @@ app.get("/recent-disbursements", async function (req: Request, res: Response, ne
     }
 })
 
-app.get("/login", async function (req: Request, res: Response, next: NextFunction) {
+app.post("/login", async function (req: Request, res: Response, next: NextFunction) {
     try {
+        interface Credentials {
+            username: string;
+            password: string;
+        }
+
         const response = await axios.get(config.GOOGLE_SHEETS_CSV_URL as string);
 
         const csvText = response.data
 
         const rows = csvText.split(/\r?\n/).map((row: string) => row?.split(','));
 
-        interface Credentials {
-            username: string;
-            password: string;
+        const { username, password } = req.body as Credentials;
+
+        if (!username && !password) {
+            throw new Error("Login information is required.")
         }
 
         const data: string[][] = [
@@ -277,7 +283,14 @@ app.get("/login", async function (req: Request, res: Response, next: NextFunctio
             }
         });
 
-        res.status(200).json(credentials)
+        if (!(username === credentials.username) || !(password === credentials.password)) {
+            throw new Error("Username or password is not correct")
+        }
+
+        res.status(200).json({
+            username,
+            message: "Login successful"
+        })
 
     } catch (error) {
         next(error)
@@ -296,7 +309,7 @@ app.use(function (err: Error, req: Request, res: Response, next: NextFunction) {
     }
 
     res.status(500)
-    res.render('error', { error: err })
+    res.json({ error: err })
 })
 
 export default app;
