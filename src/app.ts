@@ -170,35 +170,29 @@ app.get("/disbursement-info", async function (req: Request, res: Response, next:
 
         const data: string[][] = []
 
-        for (let i = 4; i <= 15; i++) {
-            data.push(rows[i])
-
+        for (let i = 4; i <= 13; i++) {
+            data.push(rows[i].slice(3))
         }
 
         const disbursements: Disbursement[] = [];
-        const dateRegex = /"([a-zA-Z]+\s+\d{1,2})\s*(\d{4})"/;
 
-        data.forEach(row => {
-            const disbursementIndex = row.findIndex(item => item.startsWith('Disbursement'));
-            if (disbursementIndex !== -1) {
-                const disbursementTitle = row[disbursementIndex];
-                const dateMatch = (row[disbursementIndex + 1] + ' ' + row[disbursementIndex + 2]).match(dateRegex);
-                const datePaid = dateMatch ? new Date(`${dateMatch[1]} ${dateMatch[2]}`).toISOString() : '';
-                const disbursementsPaid = parseFloat(row[disbursementIndex + 3].replace(/[^0-9.-]+/g, '')) || '';
-                const disbursementsExpected = parseFloat(row[disbursementIndex + 4].replace(/[^0-9.-]+/g, '')) || '';
-                const blockchainTxUrl = row[disbursementIndex + 5] || '';
+        data.forEach((row) => {
+            const disbursement = row[0];
+            const dateString = row[1].replace(/"/g, '') + row[2].replace(/"/g, '');
+            const date = dateString;
+            const amount = row[4];
+            const url = row[5];
 
-                disbursements.push({
-                    disbursement: disbursementTitle,
-                    date_paid: datePaid,
-                    disbursements_paid: disbursementsPaid,
-                    disbursements_expected: disbursementsExpected,
-                    blockchain_tx_url: blockchainTxUrl
-                });
-            }
+            disbursements.push({
+                disbursement,
+                date_paid: date,
+                disbursements_paid: "",
+                disbursements_expected: amount,
+                blockchain_tx_url: url
+            });
         });
 
-        res.status(200).json(disbursements)
+        res.json(disbursements)
 
     } catch (error) {
         next(error)
@@ -218,28 +212,24 @@ app.get("/recent-disbursements", async function (req: Request, res: Response, ne
 
         const disbursements: RecentDisbursement[] = [];
 
-        data.forEach(row => {
-            const disbursementIndex = row.findIndex((item: string) => item.startsWith('Disbursement'));
-            if (disbursementIndex !== -1) {
-                const mostRecentDisbursement = row[disbursementIndex - 1].trim();
-                const disbursementTitle = row[disbursementIndex].trim();
+        for (let i = 0; i < data.length; i++) {
+            const mostRecentDisbursement = data[i][0];
+            const disbursementTitle = data[i][1]
 
-                const dateRegex = /"([a-zA-Z]+\s+\d{1,2})\s*(\d{4})"/;
-                const dateMatch = (row[disbursementIndex + 1] + ' ' + row[disbursementIndex + 2]).match(dateRegex);
-                const datePaid = dateMatch ? new Date(`${dateMatch[1]} ${dateMatch[2]}`).toISOString() : '';
+            const datePaid = new Date((data[i][2] + data[i][3]))
 
-                const amountPaid = parseFloat((row[disbursementIndex + 3] + row[disbursementIndex + 4]).replace(/[^0-9.-]+/g, '')) || 0;
-                const blockchainTxUrl = row[disbursementIndex + 5]?.trim() || '';
+            const amountPaid = ("$" + data[i][4] + data[i][5]).replace(/[^0-9.-]+/g, '') || 0
 
-                disbursements.push({
-                    most_recent_disbursement: mostRecentDisbursement,
-                    disbursement_title: disbursementTitle,
-                    date_paid: datePaid,
-                    amount_paid: amountPaid,
-                    blockchain_tx_url: blockchainTxUrl
-                });
-            }
-        });
+            const blockchainTxUrl = data[i][6]?.trim() || '';
+
+            disbursements.push({
+                most_recent_disbursement: mostRecentDisbursement,
+                disbursement_title: disbursementTitle,
+                date_paid: datePaid,
+                amount_paid: amountPaid,
+                blockchain_tx_url: blockchainTxUrl
+            });
+        }
 
         res.status(200).json(disbursements)
 

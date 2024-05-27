@@ -9,7 +9,7 @@ export interface Disbursement {
 export interface RecentDisbursement {
     most_recent_disbursement: string;
     disbursement_title: string;
-    date_paid: string;
-    amount_paid: number;
+    date_paid: Date | "";
+    amount_paid: string | 0;
     blockchain_tx_url: string;
 }
