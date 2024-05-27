@@ -254,7 +254,10 @@ app.post("/login", async function (req: Request, res: Response, next: NextFuncti
         const { username, password } = req.body as Credentials;
 
         if (!username && !password) {
-            throw new Error("Login information is required.")
+            return res.status(500).json({
+                success: false,
+                messgae: "Login information is required"
+            })
         }
 
         const data: string[][] = [
@@ -274,11 +277,15 @@ app.post("/login", async function (req: Request, res: Response, next: NextFuncti
         });
 
         if (!(username === credentials.username) || !(password === credentials.password)) {
-            throw new Error("Username or password is not correct")
+            return res.status(500).json({
+                success: false,
+                messgae: "Username or password is not correct"
+            })
         }
 
         res.status(200).json({
             username,
+            success: true,
             message: "Login successful"
         })
 
