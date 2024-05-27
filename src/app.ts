@@ -78,16 +78,14 @@ app.get("/vpsblc-info", async function (req: Request, res: Response, next: NextF
                 break;
             }
 
-            // console.log(row)
-
             if (inVPSBLCInformationSection && row[0]?.trim() !== '') {
                 const key = row[0]?.trim().replace(/:$/, '');
                 let value = ""
                 if (key === "VPSBLC Purchase Price") {
-                    value = row.slice(1, row.length - 6).join(" ").trim() || '';
+                    value = row.slice(1, row.length - 6)?.join(" ")?.trim()?.replace("\"", "")?.replace("\"", "") || '';
                 }
                 else if (key === "VPSBLC Face Value") {
-                    value = row.slice(1, row.length - 8).join(" ").trim() || '';
+                    value = row.slice(1, row.length - 8).join(" ")?.trim()?.replace("\"", "")?.replace("\"", "") || '';
                 }
                 else {
                     value = row[1]?.trim() || '';
@@ -135,6 +133,18 @@ app.get("/disbursement-overview", async function (req: Request, res: Response, n
 
                 disbursementOverview[key] = value;
             }
+        }
+
+        if (disbursementOverview["username"]) {
+            delete disbursementOverview["username"]
+        }
+
+        if (disbursementOverview["password"]) {
+            delete disbursementOverview["password"]
+        }
+
+        if (disbursementOverview["login"]) {
+            delete disbursementOverview["login"]
         }
 
         res.status(200).json(disbursementOverview)
