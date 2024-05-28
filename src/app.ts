@@ -180,7 +180,7 @@ app.get("/disbursement-info", async function (req: Request, res: Response, next:
 
         const data: string[][] = []
 
-        for (let i = 4; i <= 13; i++) {
+        for (let i = 4; i < 14; i++) {
             data.push(rows[i].slice(3))
         }
 
@@ -191,13 +191,15 @@ app.get("/disbursement-info", async function (req: Request, res: Response, next:
             const dateString = row[1].replace(/"/g, '') + row[2].replace(/"/g, '');
             const date = dateString;
             const amount = row[4];
-            const url = row[5];
+            const line_chart = row[5];
+            const url = row[6];
 
             disbursements.push({
                 disbursement,
                 date_paid: date,
                 disbursements_paid: "",
                 disbursements_expected: amount,
+                line_chart,
                 blockchain_tx_url: url
             });
         });

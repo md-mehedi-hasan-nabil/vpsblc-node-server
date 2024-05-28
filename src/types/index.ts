@@ -1,8 +1,9 @@
 export interface Disbursement {
     disbursement: string;
     date_paid: string;
-    disbursements_paid: number | string;
-    disbursements_expected: number | string;
+    disbursements_paid: string;
+    disbursements_expected: string;
+    line_chart: string;
     blockchain_tx_url: string;
 }
 
