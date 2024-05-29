@@ -13,7 +13,6 @@ app.use(express.json());
 app.use(cors());
 app.use(morgan('tiny'));
 
-
 app.get("/client-info", async function (req: Request, res: Response, next: NextFunction) {
     try {
         const response = await axios.get(config.GOOGLE_SHEETS_CSV_URL as string);
@@ -190,6 +189,7 @@ app.get("/disbursement-info", async function (req: Request, res: Response, next:
             const disbursement = row[0];
             const dateString = row[1].replace(/"/g, '') + row[2].replace(/"/g, '');
             const date = dateString;
+            const disbursements_paid = row[3];
             const amount = row[4];
             const line_chart = row[5];
             const url = row[6];
@@ -197,7 +197,7 @@ app.get("/disbursement-info", async function (req: Request, res: Response, next:
             disbursements.push({
                 disbursement,
                 date_paid: date,
-                disbursements_paid: "",
+                disbursements_paid,
                 disbursements_expected: amount,
                 line_chart,
                 blockchain_tx_url: url
