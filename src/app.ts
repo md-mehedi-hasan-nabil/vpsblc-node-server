@@ -109,41 +109,17 @@ app.get("/disbursement-overview", async function (req: Request, res: Response, n
 
         const disbursementOverview: { [key: string]: string } = {};
 
-        let isDisbursementOverviewSection = false;
+        const data: string[][] = []
 
-        for (let i = 0; i < rows.length; i++) {
-            const row = rows[i];
-
-            if (row[0]?.trim() === 'Disbursement Overview') {
-                isDisbursementOverviewSection = true;
-                continue;
-            }
-
-            if (isDisbursementOverviewSection && row[0]?.trim() !== '') {
-                const key = row[0]?.trim().replace(/:$/, '');
-                let value = ""
-
-                if ((key === "Next Disbursement") || (key === "Next Disbursement Amount") || (key === "Earnings to Date")) {
-
-                    value = row.slice(1, row.length).join(" ").trim().replace(/""/g, '"').replace(/"\$/g, '$').replace(/"\B/g, '') || '';
-                } else {
-                    value = row[1]?.trim().replace(/""/g, '"').replace(/"\$/g, '$').replace(/"\B/g, '') || '';
-                }
-
-                disbursementOverview[key] = value;
-            }
+        for (let i = 25; i <= 27; i++) {
+            data.push(rows[i])
         }
 
-        if (disbursementOverview["username"]) {
-            delete disbursementOverview["username"]
-        }
+        for (let i = 0; i < data.length; i++) {
+            const key = data[i][0]?.trim().replace(":", "")
+            const value = data[i].splice(1, 2).toString().replace(/^"(.*)"$/, '$1')
 
-        if (disbursementOverview["password"]) {
-            delete disbursementOverview["password"]
-        }
-
-        if (disbursementOverview["login"]) {
-            delete disbursementOverview["login"]
+            disbursementOverview[key] = value;
         }
 
         res.status(200).json(disbursementOverview)
@@ -244,6 +220,41 @@ app.get("/recent-disbursements", async function (req: Request, res: Response, ne
         }
 
         res.status(200).json(disbursements)
+
+    } catch (error) {
+        next(error)
+    }
+})
+
+app.get("/recent-trades", async function (req: Request, res: Response, next: NextFunction) {
+    try {
+        const response = await axios.get(config.GOOGLE_SHEETS_CSV_URL as string);
+        const csvText = response.data
+        const rows = csvText.split(/\r?\n/).map((row: string) => row.split(','));
+
+        const recentTrades: Record<string, string>[] = []
+
+        const data: string[][] = []
+
+        for (let i = 35; i <= 38; i++) {
+            data.push(rows[i].slice(0, 5));
+        }
+
+        for (let i = 0; i < data.length; i++) {
+            const no = data[i][0]
+            const date = data[i][1]
+            const asset = data[i][2]
+            const position = data[i][3]
+            const growth = data[i][4]
+
+            const obj = {
+                no, date, asset, position, growth
+            }
+
+            recentTrades.push(obj)
+        }
+
+        res.status(200).json(recentTrades)
 
     } catch (error) {
         next(error)
