@@ -103,23 +103,31 @@ app.get("/disbursement-overview", async function (req: Request, res: Response, n
     }
 })
 
-// app.get("/growth-analytics-chart", async function (req: Request, res: Response, next: NextFunction) {
-//     try {
-//         const response = await axios.get(config.GOOGLE_SHEETS_CSV_URL as string);
-//         const csvText = response.data
-//         const rows = csvText.split(/\r?\n/).map((row: string) => row.split(','));
+app.get("/growth-analytics-info", async function (req: Request, res: Response, next: NextFunction) {
+    try {
+        const response = await axios.get(config.GOOGLE_SHEETS_CSV_URL as string);
+        const csvText = response.data
+        const rows = csvText.split(/\r?\n/).map((row: string) => row.split(','));
 
-//         const obj = {
-//             dollar_scale: (rows[21] as []).slice(1, rows[21].length).join('').replace(/""/g, '"').replace(/"\$/g, '$').replace(/"\B/g, ''),
-//             monthly_scale: (rows[22] as []).slice(1, rows[21].length).join('')
-//         }
+        const data: string[][] = []
+        const analyticsInfo: { [key: string]: string } = {};
 
-//         res.status(200).json(obj)
+        for (let i = 26; i <= 29; i++) {
+            data.push(rows[i]?.slice(0, 3))
+        }
 
-//     } catch (error) {
-//         next(error)
-//     }
-// })
+        data.forEach((row, index) => {
+            const key = data[index][0]?.replace(":", "");
+            const value = data[index]?.slice(1, 3)?.join(',')?.replace('"', "")?.replace('"', "")?.replace(',', "")
+            analyticsInfo[key] = value
+        })
+
+        res.status(200).json(analyticsInfo)
+
+    } catch (error) {
+        next(error)
+    }
+})
 
 app.get("/disbursement-info", async function (req: Request, res: Response, next: NextFunction) {
     try {
