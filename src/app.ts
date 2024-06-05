@@ -168,8 +168,8 @@ app.get("/recent-disbursements", async function (req: Request, res: Response, ne
         const rows = csvText.split(/\r?\n/).map((row: string) => row.split(','));
 
         const data: string[][] = [
-            rows[18].slice(3),
-            rows[19].slice(3)
+            rows[24].slice(3),
+            rows[25].slice(3)
         ];
 
         const disbursements: RecentDisbursement[] = [];
@@ -178,7 +178,7 @@ app.get("/recent-disbursements", async function (req: Request, res: Response, ne
             const mostRecentDisbursement = data[i][0];
             const disbursementTitle = data[i][1]
 
-            const datePaid = new Date((data[i][2] + data[i][3]))
+            const datePaid = ((data[i][2] + data[i][3]))?.replace("\"", "").replace("\"", "")
 
             const amountPaid = ("$" + data[i][4] + data[i][5]).replace(/[^0-9.-]+/g, '') || 0
 
