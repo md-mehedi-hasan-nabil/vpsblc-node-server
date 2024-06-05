@@ -21,31 +21,18 @@ app.get("/client-info", async function (req: Request, res: Response, next: NextF
 
         const rows = csvText.split(/\r?\n/).map((row: string) => row.split(','));
 
+        const data: string[][] = []
         const clientInfo: { [key: string]: string } = {};
 
-        let inClientInfoSection = false;
-
-        for (let i = 0; i < rows.length; i++) {
-            const row = rows[i];
-
-            // Check if we are inside the Client Information section
-            if (row[0]?.trim() === 'Client Information') {
-                inClientInfoSection = true;
-                continue;
-            }
-
-            // Break the loop if we have exited the Client Information section
-            if (inClientInfoSection && row[0]?.trim() === 'VPSBLC Information') {
-                break;
-            }
-
-            // Process rows within the Client Information section
-            if (inClientInfoSection && row[0]?.trim() !== '') {
-                const key = row[0]?.trim().replace(/:$/, '');
-                const value = row[1]?.trim() || '';
-                clientInfo[key] = value;
-            }
+        for (let i = 4; i < 12; i++) {
+            data.push(rows[i].slice(0, 2))
         }
+
+        data.forEach((row) => {
+            const key = row[0]?.trim().replace(/:$/, '');
+            const value = row[1]?.trim() || '';
+            clientInfo[key] = value;
+        });
 
         res.status(200).json(clientInfo)
 
@@ -62,37 +49,18 @@ app.get("/vpsblc-info", async function (req: Request, res: Response, next: NextF
         const rows = csvText.split(/\r?\n/).map((row: string) => row.split(','));
 
         const VPSBLCInformation: { [key: string]: string } = {};
+        const data: string[][] = []
 
-        let inVPSBLCInformationSection = false;
-
-        for (let i = 0; i < rows.length; i++) {
-            const row = rows[i];
-
-            if (row[0]?.trim() === 'VPSBLC Information') {
-                inVPSBLCInformationSection = true;
-                continue;
-            }
-
-            if (inVPSBLCInformationSection && row[0]?.trim() === 'Growth Analytics Chart') {
-                break;
-            }
-
-            if (inVPSBLCInformationSection && row[0]?.trim() !== '') {
-                const key = row[0]?.trim().replace(/:$/, '');
-                let value = ""
-                if (key === "VPSBLC Purchase Price") {
-                    value = row.slice(1, row.length - 6)?.join(" ")?.trim()?.replace("\"", "")?.replace("\"", "") || '';
-                }
-                else if (key === "VPSBLC Face Value") {
-                    value = row.slice(1, row.length - 8).join(" ")?.trim()?.replace("\"", "")?.replace("\"", "") || '';
-                }
-                else {
-                    value = row[1]?.trim() || '';
-                }
-
-                VPSBLCInformation[key] = value;
-            }
+        for (let i = 18; i <= 22; i++) {
+            data.push(rows[i].slice(0, 3))
         }
+
+        data.forEach((row) => {
+            const key = row[0]?.trim().replace(/:$/, '');
+            const value = row.slice(1, row.length)?.join(" ")?.trim()?.replace("\"", "")?.replace("\"", "") || ''
+
+            VPSBLCInformation[key] = value;
+        });
 
         res.status(200).json(VPSBLCInformation)
 
@@ -111,15 +79,21 @@ app.get("/disbursement-overview", async function (req: Request, res: Response, n
 
         const data: string[][] = []
 
-        for (let i = 25; i <= 27; i++) {
+        for (let i = 19; i <= 21; i++) {
             data.push(rows[i])
         }
 
-        for (let i = 0; i < data.length; i++) {
-            const key = data[i][0]?.trim().replace(":", "")
-            const value = data[i].splice(1, 2).toString().replace(/^"(.*)"$/, '$1')
+        // console.log(data)
 
-            disbursementOverview[key] = value;
+        for (let i = 0; i < data.length; i++) {
+            const position = data[i].findIndex(el => el.includes("Next Disbursement:") || el.includes("Next Disbursement Amount: ") || el.includes("Earnings to Date:"))
+
+            if (0 < position) {
+                const key = data[i][position]?.trim().replace(":", "")
+                const value = data[i].splice(position + 1, 2).toString().replace(/^"(.*)"$/, '$1')
+
+                disbursementOverview[key] = value;
+            }
         }
 
         res.status(200).json(disbursementOverview)
@@ -129,23 +103,23 @@ app.get("/disbursement-overview", async function (req: Request, res: Response, n
     }
 })
 
-app.get("/growth-analytics-chart", async function (req: Request, res: Response, next: NextFunction) {
-    try {
-        const response = await axios.get(config.GOOGLE_SHEETS_CSV_URL as string);
-        const csvText = response.data
-        const rows = csvText.split(/\r?\n/).map((row: string) => row.split(','));
+// app.get("/growth-analytics-chart", async function (req: Request, res: Response, next: NextFunction) {
+//     try {
+//         const response = await axios.get(config.GOOGLE_SHEETS_CSV_URL as string);
+//         const csvText = response.data
+//         const rows = csvText.split(/\r?\n/).map((row: string) => row.split(','));
 
-        const obj = {
-            dollar_scale: (rows[21] as []).slice(1, rows[21].length).join('').replace(/""/g, '"').replace(/"\$/g, '$').replace(/"\B/g, ''),
-            monthly_scale: (rows[22] as []).slice(1, rows[21].length).join('')
-        }
+//         const obj = {
+//             dollar_scale: (rows[21] as []).slice(1, rows[21].length).join('').replace(/""/g, '"').replace(/"\$/g, '$').replace(/"\B/g, ''),
+//             monthly_scale: (rows[22] as []).slice(1, rows[21].length).join('')
+//         }
 
-        res.status(200).json(obj)
+//         res.status(200).json(obj)
 
-    } catch (error) {
-        next(error)
-    }
-})
+//     } catch (error) {
+//         next(error)
+//     }
+// })
 
 app.get("/disbursement-info", async function (req: Request, res: Response, next: NextFunction) {
     try {
@@ -236,8 +210,8 @@ app.get("/recent-trades", async function (req: Request, res: Response, next: Nex
 
         const data: string[][] = []
 
-        for (let i = 35; i <= 38; i++) {
-            data.push(rows[i].slice(0, 5));
+        for (let i = 33; i <= 36; i++) {
+            data.push(rows[i].slice(0, 7));
         }
 
         for (let i = 0; i < data.length; i++) {
@@ -245,16 +219,36 @@ app.get("/recent-trades", async function (req: Request, res: Response, next: Nex
             const date = data[i][1]
             const asset = data[i][2]
             const position = data[i][3]
-            const growth = data[i][4]
+            const pnl = data[i][4]
+            const growth = data[i][5]
 
             const obj = {
-                no, date, asset, position, growth
+                no, date, asset, position, pnl, growth
             }
 
             recentTrades.push(obj)
         }
 
         res.status(200).json(recentTrades)
+
+    } catch (error) {
+        next(error)
+    }
+})
+
+app.get("/disbursement-cycle", async function (req: Request, res: Response, next: NextFunction) {
+    try {
+        const response = await axios.get(config.GOOGLE_SHEETS_CSV_URL as string);
+        const csvText = response.data
+        const rows = csvText.split(/\r?\n/).map((row: string) => row.split(','));
+
+        const data: string[] = rows[39]
+
+
+        const key = "Disbursement Completed";
+        const value = data[1]?.trim() || '';
+
+        res.status(200).json({ [key]: value })
 
     } catch (error) {
         next(error)
