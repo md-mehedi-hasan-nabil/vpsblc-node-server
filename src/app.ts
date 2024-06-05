@@ -278,18 +278,21 @@ app.post("/login", async function (req: Request, res: Response, next: NextFuncti
         }
 
         const data: string[][] = [
-            rows[30],
-            rows[31]
+            rows[14],
+            rows[15]
         ]
 
         const credentials: Partial<Credentials> = {};
 
-        data.forEach(row => {
-            const key = row[0]?.trim();
+        data.forEach((row, index) => {
             const value = row[1]?.trim();
 
-            if (key && value) {
-                credentials[key as keyof Credentials] = value;
+            if (index === 0) {
+                credentials["username"] = value
+            }
+
+            if (index === 1) {
+                credentials["password"] = value
             }
         });
 
