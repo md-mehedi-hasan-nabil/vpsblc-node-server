@@ -7,6 +7,6 @@ dotenv.config({
 
 export default {
     PORT: process.env.PORT,
-    GOOGLE_SHEETS_CSV_URL: process.env.GOOGLE_SHEETS_CSV_URL,
-    ORIGIN_URL: process.env.ORIGIN_URL
+    // GOOGLE_SHEETS_CSV_URL: process.env.GOOGLE_SHEETS_CSV_URL,
+    GOOGLE_SHEETS_ADMIN_CSV_URL: process.env.GOOGLE_SHEETS_ADMIN_CSV_URL
 }

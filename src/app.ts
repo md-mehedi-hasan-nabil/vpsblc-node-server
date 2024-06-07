@@ -2,20 +2,21 @@ import express, { NextFunction, Request, Response } from "express";
 import cors from "cors";
 import morgan from "morgan";
 import axios from "axios";
-import config from "./app/config";
 import { Disbursement, RecentDisbursement } from "./types";
+import { authCheck } from "./middlewares/authCheck";
+import config from "./app/config";
 
 const app = express();
-
-app.set('view engine', 'ejs')
 
 app.use(express.json());
 app.use(cors());
 app.use(morgan('tiny'));
 
-app.get("/client-info", async function (req: Request, res: Response, next: NextFunction) {
+
+app.get("/client-info", authCheck, async function (req: Request, res: Response, next: NextFunction) {
     try {
-        const response = await axios.get(config.GOOGLE_SHEETS_CSV_URL as string);
+        //  const response = await axios.get(config.GOOGLE_SHEETS_CSV_URL as string);
+        const response = await axios.get(req?.GOOGLE_SHEETS_URL as string);
 
         const csvText = response.data
 
@@ -41,9 +42,9 @@ app.get("/client-info", async function (req: Request, res: Response, next: NextF
     }
 })
 
-app.get("/vpsblc-info", async function (req: Request, res: Response, next: NextFunction) {
+app.get("/vpsblc-info", authCheck, async function (req: Request, res: Response, next: NextFunction) {
     try {
-        const response = await axios.get(config.GOOGLE_SHEETS_CSV_URL as string);
+        const response = await axios.get(req?.GOOGLE_SHEETS_URL as string);
         const csvText = response.data
 
         const rows = csvText.split(/\r?\n/).map((row: string) => row.split(','));
@@ -69,9 +70,9 @@ app.get("/vpsblc-info", async function (req: Request, res: Response, next: NextF
     }
 })
 
-app.get("/disbursement-overview", async function (req: Request, res: Response, next: NextFunction) {
+app.get("/disbursement-overview", authCheck, async function (req: Request, res: Response, next: NextFunction) {
     try {
-        const response = await axios.get(config.GOOGLE_SHEETS_CSV_URL as string);
+        const response = await axios.get(req?.GOOGLE_SHEETS_URL as string);
         const csvText = response.data
         const rows = csvText.split(/\r?\n/).map((row: string) => row.split(','));
 
@@ -103,9 +104,9 @@ app.get("/disbursement-overview", async function (req: Request, res: Response, n
     }
 })
 
-app.get("/growth-analytics-info", async function (req: Request, res: Response, next: NextFunction) {
+app.get("/growth-analytics-info", authCheck, async function (req: Request, res: Response, next: NextFunction) {
     try {
-        const response = await axios.get(config.GOOGLE_SHEETS_CSV_URL as string);
+        const response = await axios.get(req?.GOOGLE_SHEETS_URL as string);
         const csvText = response.data
         const rows = csvText.split(/\r?\n/).map((row: string) => row.split(','));
 
@@ -129,9 +130,9 @@ app.get("/growth-analytics-info", async function (req: Request, res: Response, n
     }
 })
 
-app.get("/disbursement-info", async function (req: Request, res: Response, next: NextFunction) {
+app.get("/disbursement-info", authCheck, async function (req: Request, res: Response, next: NextFunction) {
     try {
-        const response = await axios.get(config.GOOGLE_SHEETS_CSV_URL as string);
+        const response = await axios.get(req?.GOOGLE_SHEETS_URL as string);
         const csvText = response.data
         const rows = csvText.split(/\r?\n/).map((row: string) => row.split(','));
 
@@ -169,9 +170,9 @@ app.get("/disbursement-info", async function (req: Request, res: Response, next:
     }
 })
 
-app.get("/recent-disbursements", async function (req: Request, res: Response, next: NextFunction) {
+app.get("/recent-disbursements", authCheck, async function (req: Request, res: Response, next: NextFunction) {
     try {
-        const response = await axios.get(config.GOOGLE_SHEETS_CSV_URL as string);
+        const response = await axios.get(req?.GOOGLE_SHEETS_URL as string);
         const csvText = response.data
         const rows = csvText.split(/\r?\n/).map((row: string) => row.split(','));
 
@@ -208,9 +209,9 @@ app.get("/recent-disbursements", async function (req: Request, res: Response, ne
     }
 })
 
-app.get("/recent-trades", async function (req: Request, res: Response, next: NextFunction) {
+app.get("/recent-trades", authCheck, async function (req: Request, res: Response, next: NextFunction) {
     try {
-        const response = await axios.get(config.GOOGLE_SHEETS_CSV_URL as string);
+        const response = await axios.get(req?.GOOGLE_SHEETS_URL as string);
         const csvText = response.data
         const rows = csvText.split(/\r?\n/).map((row: string) => row.split(','));
 
@@ -244,9 +245,9 @@ app.get("/recent-trades", async function (req: Request, res: Response, next: Nex
     }
 })
 
-app.get("/disbursement-cycle", async function (req: Request, res: Response, next: NextFunction) {
+app.get("/disbursement-cycle", authCheck, async function (req: Request, res: Response, next: NextFunction) {
     try {
-        const response = await axios.get(config.GOOGLE_SHEETS_CSV_URL as string);
+        const response = await axios.get(req?.GOOGLE_SHEETS_URL as string);
         const csvText = response.data
         const rows = csvText.split(/\r?\n/).map((row: string) => row.split(','));
 
@@ -266,61 +267,61 @@ app.get("/disbursement-cycle", async function (req: Request, res: Response, next
 app.post("/login", async function (req: Request, res: Response, next: NextFunction) {
     try {
         interface Credentials {
-            username: string;
+            email: string;
             password: string;
         }
 
-        const response = await axios.get(config.GOOGLE_SHEETS_CSV_URL as string);
+        const { email, password } = req.body as Credentials;
 
-        const csvText = response.data
-
-        const rows = csvText.split(/\r?\n/).map((row: string) => row?.split(','));
-
-        const { username, password } = req.body as Credentials;
-
-        if (!username && !password) {
-            return res.status(500).json({
+        if (!email || !password) {
+            return res.status(400).json({
                 success: false,
-                messgae: "Login information is required"
-            })
+                message: "Login information is required"
+            });
         }
 
-        const data: string[][] = [
-            rows[14],
-            rows[15]
-        ]
+        const response = await axios.get(config.GOOGLE_SHEETS_ADMIN_CSV_URL as string);
+        const csvText = response.data;
 
-        const credentials: Partial<Credentials> = {};
+        const rows = csvText.split(/\r?\n/).map((row: string) => row.split(','));
 
-        data.forEach((row, index) => {
-            const value = row[1]?.trim();
+        const authInfo: { [key: string]: Record<string, string> } = {};
 
-            if (index === 0) {
-                credentials["username"] = value
+        for (let i = 1; i < rows.length; i++) {
+            const row = rows[i];
+            if (row.length >= 2) {
+                const email = row[0]?.trim();
+                const password = row[1]?.trim();
+
+                if (email && password) {
+                    authInfo[email] = {
+                        email,
+                        password
+                    };
+                }
             }
+        }
 
-            if (index === 1) {
-                credentials["password"] = value
-            }
-        });
+        const sheets_email = authInfo[email]?.email;
+        const sheets_password = authInfo[email]?.password;
 
-        if (!(username === credentials.username) || !(password === credentials.password)) {
-            return res.status(500).json({
+        if (!(sheets_email === email?.trim() && sheets_password === password?.trim())) {
+            return res.status(400).json({
                 success: false,
-                messgae: "Username or password is not correct"
-            })
+                message: "Username or password is not correct"
+            });
         }
 
         res.status(200).json({
-            username,
+            email,
             success: true,
             message: "Login successful"
-        })
+        });
 
     } catch (error) {
-        next(error)
+        next(error);
     }
-})
+});
 
 app.get("/", function (req: Request, res: Response) {
     res.json({
