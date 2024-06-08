@@ -138,7 +138,7 @@ app.get("/disbursement-info", authCheck, async function (req: Request, res: Resp
 
         const data: string[][] = []
 
-        for (let i = 4; i < 14; i++) {
+        for (let i = 5; i < 14; i++) {
             data.push(rows[i].slice(3))
         }
 
@@ -285,13 +285,15 @@ app.post("/login", async function (req: Request, res: Response, next: NextFuncti
 
         const rows = csvText.split(/\r?\n/).map((row: string) => row.split(','));
 
+        
         const authInfo: { [key: string]: Record<string, string> } = {};
-
-        for (let i = 1; i < rows.length; i++) {
+        
+        for (let i = 3; i < rows.length; i++) {
             const row = rows[i];
+
             if (row.length >= 2) {
-                const email = row[0]?.trim();
-                const password = row[1]?.trim();
+                const email = row[4]?.trim();
+                const password = row[5]?.trim();
 
                 if (email && password) {
                     authInfo[email] = {

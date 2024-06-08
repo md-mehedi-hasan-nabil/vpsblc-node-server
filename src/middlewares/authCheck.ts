@@ -14,21 +14,28 @@ export async function authCheck(req: Request, res: Response, next: NextFunction)
 
             const rows = csvText.split(/\r?\n/).map((row: string) => row.split(','));
 
-            const authInfo: { [key: string]: string } = {};
-
-            for (let i = 1; i < rows.length; i++) {
+            const authInfo: { [key: string]: Record<string, string> } = {};
+        
+            for (let i = 3; i < rows.length; i++) {
                 const row = rows[i];
-                if (row.length >= 3) {
-                    const key = row[0]?.trim();
-                    const value = row[2]?.trim();
-                    if (key && value) {
-                        authInfo[key] = value;
+    
+                if (row.length >= 2) {
+                    const email = row[4]?.trim();
+                    const password = row[5]?.trim();
+                    const sheets = row[6]?.trim();
+    
+                    if (email && password) {
+                        authInfo[email] = {
+                            email,
+                            password,
+                            sheets
+                        };
                     }
                 }
             }
 
             if (authInfo[email]) {
-                req.GOOGLE_SHEETS_URL = authInfo[email];
+                req.GOOGLE_SHEETS_URL = authInfo[email].sheets
                 // console.log(authInfo);
 
                 next();
